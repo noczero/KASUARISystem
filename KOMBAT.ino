@@ -11,20 +11,22 @@
 
 
 /*----------  ADT Library   ----------*/
-#include <I2Cdev.h>
+#include "I2C.h"
 #include <Wire.h>
 #include "MS5611.h" //Pressure & Altitude
 #include "SHT1x.h"
 #include "TinyGPS.h"
 #include "dht.h"
+#include "CMPS10.h"
 /*----------  End of ADT Library  ----------*/
 
 /*----------  PIN Declaration  ----------*/
-#define CO2Sensor A8
-#define airSpeedPIN  A9
+#define CO2Sensor A9
+#define airSpeedPIN  A8
 #define dataPinSHT11  2
 #define clockPinSHT11 52 //SCK
-#define DHT11 7
+#define DHT11 6
+//#define buz 6
 // camera Tx Rx serial1
 // GPS Tx Rx serial2
 // 3Dr Rx Rx serial 
@@ -35,6 +37,7 @@ MS5611 pressure;
 //SHT1x tempHumid(dataPinSHT11, clockPinSHT11);
 TinyGPSPlus gps;
 dht DHT;
+CMPS10 compass;
 /*----------  End of Class Declaration  ----------*/
 
 /*----------  Variable Declaration  ----------*/
@@ -68,14 +71,23 @@ char status;
 
 void setup() {
   // put your setup code here, to run once:
-
   delay(100); // Wait for sensors to get ready
 
   Serial.begin(115200);
   Serial1.begin(38400); //Camera
   Serial2.begin(9600); //GPS Tx2 Rx2
 
+  // camera initializtion
 
+  Serial.println("Camera Initialize...");
+  delay(100);
+  SendResetCmd();
+  delay(500);   
+  SetImageSizeCmd(0X11); //ukuran gambar 
+  delay(200);
+  //SendResetCmd();
+  //delay(3000);
+  Serial.println("Camera Init Success...");
   /*======================================
   =            Pressure Setup            =
   ======================================*/
@@ -128,11 +140,11 @@ double getPressure() {
 }
 
 void printPitchRollYaw(){
-  Serial.print(0);
+  Serial.print(compass.pitch()); 
   Serial.print(','); 
-  Serial.print(0); 
+  Serial.print(compass.roll());
   Serial.print(','); 
-  Serial.print(0); 
+  Serial.print(compass.bearing()); 
 }
 
 void printAltitude() {
@@ -187,12 +199,14 @@ void printTekanan(){
 }
 
 void printArahAngin(){
-  Serial.print("0");
+  Serial.print("18");
 }
 
 void printKecAngin() {
     asVolts = analogRead(airSpeedPIN) * .0047;
-      compVOut = asVolts - asOffsetV;
+//    Serial.print(asVolts);
+//    Serial.print(':');
+    compVOut = asVolts - asOffsetV;
     if(compVOut < .005)  {                    // Set noise to 0, min speed is ~8mph
       compVOut = 0.0;
     }  
@@ -210,7 +224,7 @@ void printLintangBujur() {
 void printCO2() {
   sensorValue = analogRead(CO2Sensor); 
   voltage = sensorValue*(5000/1024.0); 
-  
+
   if(voltage == 0)
   {
     Serial.print("Fault");
@@ -322,6 +336,8 @@ void SendTakePhotoCmd()
     Serial1.write(0x36);
     Serial1.write(0x01);
     Serial1.write(ZERO); 
+
+    i = 0x0000; //reset so that another picture can taken
 }
  
 void SendReadDataCmd()
@@ -356,56 +372,53 @@ void StopTakePhotoCmd()
     Serial1.write(0x03);
 }
 
+
 void mainPhoto(){
-    //byte a[32];
-    //int ii;    
-    EndFlag = 0;
-    delay(100);
-    SendResetCmd();
-    delay(500);   
-    SetImageSizeCmd(0X22); //ukuran gambar 
-    delay(100);
-    SendTakePhotoCmd();
-    delay(1000);
-    while(Serial1.available()>0)
-    {
-        incomingbyte=Serial1.read();
-    }
+      SendTakePhotoCmd();
+      delay(100);
+      while(Serial1.available()>0)
+      {
+          incomingbyte=Serial1.read();
+      }
+   
+      while(!EndFlag)
+      {
+          j=0;
+          k=0;
+          count=0;
+          //Serial1.flush();
+          SendReadDataCmd();
+          delay(20);
+          while(Serial1.available()>0)
+          {
+              incomingbyte=Serial1.read();
+              k++;
+              delay(1);
+              if((k>5)&&(j<32)&&(!EndFlag))
+              {
+                  dataCamera[j]=incomingbyte;
+                  if((dataCamera[j-1]==0xFF)&&(dataCamera[j]==0xD9))     //tell if the picture is finished
+                  {
+                      EndFlag=1;
+                  }
+                  j++;
+                  count++;
+              }
+          }
+   
+          for(j=0;j<count;j++)
+          {
+              if(dataCamera[j]<0x10)  Serial.print("0");
+              Serial.print(dataCamera[j],HEX);           // observe the image through serial port
+              //Serial.print(" ");
+          }
+          //Serial.println();
+      }
+
+      delay(100);
+      ambilFoto = false;
+      EndFlag = 0;
  
-    while(!EndFlag)
-    {
-        j=0;
-        k=0;
-        count=0;
-        //Serial1.flush();
-        SendReadDataCmd();
-        delay(20);
-        while(Serial1.available()>0)
-        {
-            incomingbyte=Serial1.read();
-            k++;
-            delay(1);
-            if((k>5)&&(j<32)&&(!EndFlag))
-            {
-                dataCamera[j]=incomingbyte;
-                if((dataCamera[j-1]==0xFF)&&(dataCamera[j]==0xD9))     //tell if the picture is finished
-                {
-                    EndFlag=1;
-                }
-                j++;
-                count++;
-            }
-        }
- 
-        for(j=0;j<count;j++)
-        {
-            if(dataCamera[j]<0x10)  Serial.print("0");
-            Serial.print(dataCamera[j],HEX);           // observe the image through serial port
-            //Serial.print(" ");
-        }
-        //Serial.println();
-    }
-    ambilFoto = false;
 }
 
 void printFoto(int i) {
@@ -434,50 +447,50 @@ boolean checkAltitudeToCapture(double tinggi){
   boolean take;
   int ketinggian = (int) tinggi;
   
-  if (ketinggian % 200 > 10)
+  if (ketinggian % 10 > 5)
     take = false;
 
-  if((ketinggian > 500) && (ketinggian < 3000)){
-      if ((ketinggian % 200 == 0) && (take == false)){
+  if((ketinggian > 2000) && (ketinggian < 3000)){
+      if ((ketinggian % 10 == 0) && (take == false)){
         take = true;
         return true;
       }
-      else if ((ketinggian % 200 == 1) && (take == false)) {
+      else if ((ketinggian % 10 == 1) && (take == false)) {
         take = true;
         return true; 
       }
-      else if ((ketinggian % 200 == 2) && (take == false)) {
+      else if ((ketinggian % 10 == 2) && (take == false)) {
         take = true;
         return true; 
       }
-      else if ((ketinggian % 200 == 3) && (take == false)) {
+      else if ((ketinggian % 10 == 3) && (take == false)) {
         take = true;
         return true; 
       }
-      else if ((ketinggian % 200 == 4) && (take == false)) {
+      else if ((ketinggian % 10 == 4) && (take == false)) {
         take = true;
         return true; 
       }
-      else if ((ketinggian % 200 == 5) && (take == false)) {
+      else if ((ketinggian % 10 == 5) && (take == false)) {
         take = true;
         return true; 
       }
-      else if ((ketinggian % 200 == 6) && (take == false)) {
-        take = true;
-        return true; 
-      }
-      else if ((ketinggian % 200 == 7) && (take == false)) {
-        take = true;
-        return true; 
-      }
-      else if ((ketinggian % 200 == 8) && (take == false)) {
-        take = true;
-        return true; 
-      }
-      else if ((ketinggian % 200 == 9) && (take == false)) {
-        take = true;
-        return true; 
-      } 
+//      else if ((ketinggian % 10 == 6) && (take == false)) {
+//        take = true;
+//        return true; 
+//      }
+//      else if ((ketinggian % 10 == 7) && (take == false)) {
+//        take = true;
+//        return true; 
+//      }
+//      else if ((ketinggian % 10 == 8) && (take == false)) {
+//        take = true;
+//        return true; 
+//      }
+//      else if ((ketinggian % 10 == 9) && (take == false)) {
+//        take = true;
+//        return true; 
+//      } 
   }
 
   return false;
@@ -536,7 +549,8 @@ void loop() {
     
     if(ambilFoto || checkAltitudeToCapture(relativeAltitude))
       mainPhoto();
-
+//  if(ambilFoto )
+//      mainPhoto();
     //camera
     // if(ambilFoto){
     //   printFoto(inc);
@@ -559,6 +573,9 @@ void loop() {
   if (millis() > 5000 && gps.charsProcessed() < 10)
     Serial.println(F("No GPS data received: check wiring"));
 }
+
+
+
 
 
 
