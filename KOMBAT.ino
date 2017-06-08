@@ -406,13 +406,35 @@ void mainPhoto(){
               }
           }
    
+          //print parralel
+           Serial.print("OK,");  // Header [0]
+		    printAltitude();      // ketinggian [1]
+		    Serial.print(",");
+		    printTempHumidity();  // temperature [2] tekanan [3]
+		    Serial.print(",");
+		    printTekanan();       // tekanan [4]
+		    Serial.print(",");
+		    printArahAngin();     // Arah Angin [5]
+		    Serial.print(",");
+		    printKecAngin();      // Kecepatan Angin [6]
+		    Serial.print(",");
+		    printLintangBujur();  // GPS Lintang [7] dan Bujur [8]
+		    Serial.print(",");
+		    printCO2();           // print CO2 [9]
+		    Serial.print(",");
+		    printPitchRollYaw();  // print the pitch [10] roll [11] yaw [12].
+		    Serial.print(",");
+    
+
           for(j=0;j<count;j++)
           {
               if(dataCamera[j]<0x10)  Serial.print("0");
               Serial.print(dataCamera[j],HEX);           // observe the image through serial port
               //Serial.print(" ");
           }
-          //Serial.println();
+          
+
+          Serial.println();
       }
 
       delay(100);
@@ -546,9 +568,13 @@ void loop() {
     Serial.print(",");
     printPitchRollYaw();  // print the pitch [10] roll [11] yaw [12].
     Serial.print(",");
+    Serial.print("IMG");
     
-    if(ambilFoto || checkAltitudeToCapture(relativeAltitude))
+    if(ambilFoto || checkAltitudeToCapture(relativeAltitude)){
+      Serial.println();
       mainPhoto();
+    }
+      
 //  if(ambilFoto )
 //      mainPhoto();
     //camera
