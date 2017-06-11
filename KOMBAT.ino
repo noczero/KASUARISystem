@@ -147,10 +147,27 @@ void printPitchRollYaw(){
   Serial.print(compass.bearing()); 
 }
 
+boolean turun = false;
+double increment = 1.25;
 void printAltitude() {
   realPressure = getPressure();
-  relativeAltitude = pressure.altitude(realPressure,referencePressure);
-  Serial.print(relativeAltitude);
+//  relativeAltitude = pressure.altitude(realPressure,referencePressure);
+//  Serial.print(relativeAltitude);
+
+  // Demo with Altitude
+  if (!turun) {
+    relativeAltitude = relativeAltitude + increment;
+  } else {
+    relativeAltitude = relativeAltitude - increment;
+  }
+
+  if (relativeAltitude >= 9000) {
+    turun = true;
+  } else if (relativeAltitude <= 0) {
+    turun = false;
+  }
+   
+   Serial.print(relativeAltitude);  
 }
 
 void printTempHumidity() {
@@ -199,7 +216,7 @@ void printTekanan(){
 }
 
 void printArahAngin(){
-  Serial.print("18");
+  Serial.print("0");
 }
 
 void printKecAngin() {
@@ -408,22 +425,22 @@ void mainPhoto(){
    
           //print parralel
            Serial.print("OK,");  // Header [0]
-		    printAltitude();      // ketinggian [1]
-		    Serial.print(",");
-		    printTempHumidity();  // temperature [2] tekanan [3]
-		    Serial.print(",");
-		    printTekanan();       // tekanan [4]
-		    Serial.print(",");
-		    printArahAngin();     // Arah Angin [5]
-		    Serial.print(",");
-		    printKecAngin();      // Kecepatan Angin [6]
-		    Serial.print(",");
-		    printLintangBujur();  // GPS Lintang [7] dan Bujur [8]
-		    Serial.print(",");
-		    printCO2();           // print CO2 [9]
-		    Serial.print(",");
-		    printPitchRollYaw();  // print the pitch [10] roll [11] yaw [12].
-		    Serial.print(",");
+        printAltitude();      // ketinggian [1]
+        Serial.print(",");
+        printTempHumidity();  // temperature [2] tekanan [3]
+        Serial.print(",");
+        printTekanan();       // tekanan [4]
+        Serial.print(",");
+        printArahAngin();     // Arah Angin [5]
+        Serial.print(",");
+        printKecAngin();      // Kecepatan Angin [6]
+        Serial.print(",");
+        printLintangBujur();  // GPS Lintang [7] dan Bujur [8]
+        Serial.print(",");
+        printCO2();           // print CO2 [9]
+        Serial.print(",");
+        printPitchRollYaw();  // print the pitch [10] roll [11] yaw [12].
+        Serial.print(",");
     
 
           for(j=0;j<count;j++)
@@ -438,81 +455,63 @@ void mainPhoto(){
       }
 
       delay(100);
+      StopTakePhotoCmd();
       ambilFoto = false;
       EndFlag = 0;
  
 }
 
-void printFoto(int i) {
-    //boolean udahSelesai = true;
-    //int i = 0;
-
-    //while(udahSelesai){
-      if((dataCamera[i-1]==0xFF)&&(dataCamera[i]==0xD9) && (i > 1)) {
-        ambilFoto=false;
-      } else {
-        if(dataCamera[i]<0x10) Serial.print("0");
-        
-        Serial.print(dataCamera[i], HEX);
-
-        if((i % 32) == 0) Serial.println();
-      }
-    //  i++;
-    //}
-    
-}
-
 /*=====  End of Camera  ======*/
 
-//check altitude
+//check altitude
 boolean checkAltitudeToCapture(double tinggi){
   boolean take;
   int ketinggian = (int) tinggi;
   
-  if (ketinggian % 10 > 5)
+  if (ketinggian % 200 > 10)
     take = false;
 
-  if((ketinggian > 2000) && (ketinggian < 3000)){
-      if ((ketinggian % 10 == 0) && (take == false)){
+  if((ketinggian > 500) && (ketinggian < 3000)){
+      if ((ketinggian % 200 == 0) && (take == false)){
         take = true;
         return true;
       }
-      else if ((ketinggian % 10 == 1) && (take == false)) {
+      else if ((ketinggian % 200 == 1) && (take == false)) {
         take = true;
         return true; 
       }
-      else if ((ketinggian % 10 == 2) && (take == false)) {
+      else if ((ketinggian % 200 == 2) && (take == false)) {
         take = true;
         return true; 
       }
-      else if ((ketinggian % 10 == 3) && (take == false)) {
+      else if ((ketinggian % 200 == 3) && (take == false)) {
         take = true;
         return true; 
       }
-      else if ((ketinggian % 10 == 4) && (take == false)) {
+      else if ((ketinggian % 200 == 4) && (take == false)) {
         take = true;
         return true; 
       }
-      else if ((ketinggian % 10 == 5) && (take == false)) {
+      else if ((ketinggian % 200 == 5) && (take == false)) {
         take = true;
         return true; 
       }
-//      else if ((ketinggian % 10 == 6) && (take == false)) {
-//        take = true;
-//        return true; 
-//      }
-//      else if ((ketinggian % 10 == 7) && (take == false)) {
-//        take = true;
-//        return true; 
-//      }
-//      else if ((ketinggian % 10 == 8) && (take == false)) {
-//        take = true;
-//        return true; 
-//      }
-//      else if ((ketinggian % 10 == 9) && (take == false)) {
-//        take = true;
-//        return true; 
-//      } 
+     else if ((ketinggian % 200 == 6) && (take == false)) {
+       take = true;
+       return true; 
+     }
+     else if ((ketinggian % 200 == 7) && (take == false)) {
+       take = true;
+       return true; 
+     }
+     else if ((ketinggian % 200 == 8) && (take == false)) {
+       take = true;
+       return true; 
+     }
+     else if ((ketinggian % 200 == 9) && (take == false)) {
+       take = true;
+       return true; 
+     } 
   }
 
   return false;
@@ -569,22 +568,16 @@ void loop() {
     printPitchRollYaw();  // print the pitch [10] roll [11] yaw [12].
     Serial.print(",");
     Serial.print("IMG");
-    
+//    
     if(ambilFoto || checkAltitudeToCapture(relativeAltitude)){
-      Serial.println();
-      mainPhoto();
+      //check ambil foto still running or not
+      if (!ambilFoto){
+        Serial.println(); 
+        mainPhoto();
+      }
+         
     }
       
-//  if(ambilFoto )
-//      mainPhoto();
-    //camera
-    // if(ambilFoto){
-    //   printFoto(inc);
-    //   inc++;
-    // } else {
-    //   inc = 0;
-    //   Serial.println();
-    // }
     Serial.println();
   }
 
@@ -599,6 +592,8 @@ void loop() {
   if (millis() > 5000 && gps.charsProcessed() < 10)
     Serial.println(F("No GPS data received: check wiring"));
 }
+
+
 
 
 
