@@ -21,7 +21,7 @@
 /*----------  End of ADT Library  ----------*/
 
 /*----------  PIN Declaration  ----------*/
-#define CO2Sensor A9
+#define CO2Sensor A14
 #define airSpeedPIN  A8
 #define dataPinSHT11  2
 #define clockPinSHT11 52 //SCK
@@ -84,7 +84,14 @@ void setup() {
   SendResetCmd();
   delay(500);   
   SetImageSizeCmd(0X11); //ukuran gambar 
-  delay(200);
+  // delay(200);
+  // SetBaudRateCmd(0x2AE4);
+  // delay(100);
+  // SendResetCmd();
+  // delay(500);
+  // SetBaudRateCmd(0x0DA6);
+  delay(200);  
+
   //SendResetCmd();
   //delay(3000);
   Serial.println("Camera Init Success...");
@@ -151,23 +158,23 @@ boolean turun = false;
 double increment = 1.25;
 void printAltitude() {
   realPressure = getPressure();
-//  relativeAltitude = pressure.altitude(realPressure,referencePressure);
-//  Serial.print(relativeAltitude);
+ relativeAltitude = pressure.altitude(realPressure,referencePressure);
+ Serial.print(relativeAltitude);
 
   // Demo with Altitude
-  if (!turun) {
-    relativeAltitude = relativeAltitude + increment;
-  } else {
-    relativeAltitude = relativeAltitude - increment;
-  }
+  // if (!turun) {
+  //   relativeAltitude = relativeAltitude + increment;
+  // } else {
+  //   relativeAltitude = relativeAltitude - increment;
+  // }
 
-  if (relativeAltitude >= 9000) {
-    turun = true;
-  } else if (relativeAltitude <= 0) {
-    turun = false;
-  }
+  // if (relativeAltitude >= 9000) {
+  //   turun = true;
+  // } else if (relativeAltitude <= 0) {
+  //   turun = false;
+  // }
    
-   Serial.print(relativeAltitude);  
+  //  Serial.print(relativeAltitude);  
 }
 
 void printTempHumidity() {
@@ -431,10 +438,10 @@ void mainPhoto(){
         Serial.print(",");
         printTekanan();       // tekanan [4]
         Serial.print(",");
-        printArahAngin();     // Arah Angin [5]
-        Serial.print(",");
-        printKecAngin();      // Kecepatan Angin [6]
-        Serial.print(",");
+        //printArahAngin();     // Arah Angin [5]
+        //Serial.print(",");
+        //printKecAngin();      // Kecepatan Angin [6]
+        //Serial.print(",");
         printLintangBujur();  // GPS Lintang [7] dan Bujur [8]
         Serial.print(",");
         printCO2();           // print CO2 [9]
@@ -547,8 +554,8 @@ void loop() {
   // Start
   if (mulai) {
     //Start print the data
-    // 0 1 2 3 4 5 6 7 8 9 10 11 12 13
-    // Header Ketinggian  Suhu  Humid  Tekanan  Arah-Angin  Kec-Angin  Lintang   Bujur       CO2 
+    // 0 1 2 3 4 5 6 7 8 9 10 11 
+    // Header Ketinggian  Suhu  Humid  Tekanan  Lintang Bujur CO2 pitch roll yaw IMG 
     // split by ,
     Serial.print("OK,");  // Header [0]
     printAltitude();      // ketinggian [1]
@@ -557,17 +564,17 @@ void loop() {
     Serial.print(",");
     printTekanan();       // tekanan [4]
     Serial.print(",");
-    printArahAngin();     // Arah Angin [5]
+    //printArahAngin();     // Arah Angin [5]
+    //Serial.print(",");
+    //printKecAngin();      // Kecepatan Angin [6]
+    //Serial.print(",");
+    printLintangBujur();  // GPS Lintang [5] dan Bujur [6]
     Serial.print(",");
-    printKecAngin();      // Kecepatan Angin [6]
+    printCO2();           // print CO2 [7]
     Serial.print(",");
-    printLintangBujur();  // GPS Lintang [7] dan Bujur [8]
+    printPitchRollYaw();  // print the pitch [8] roll [9] yaw [10].
     Serial.print(",");
-    printCO2();           // print CO2 [9]
-    Serial.print(",");
-    printPitchRollYaw();  // print the pitch [10] roll [11] yaw [12].
-    Serial.print(",");
-    Serial.print("IMG");
+    Serial.print("IMG"); // 
 //    
     if(ambilFoto || checkAltitudeToCapture(relativeAltitude)){
       //check ambil foto still running or not
@@ -592,6 +599,10 @@ void loop() {
   if (millis() > 5000 && gps.charsProcessed() < 10)
     Serial.println(F("No GPS data received: check wiring"));
 }
+
+
+
+
 
 
 
