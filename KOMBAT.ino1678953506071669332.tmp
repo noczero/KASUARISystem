@@ -20,7 +20,6 @@
 #include "CMPS10.h"
 #include "Adafruit_SHT31.h" // Temperature & Humidity
 #include "TimerOne.h"
-#include "SimpleTimer.h"
 
 /*----------  End of ADT Library  ----------*/
 
@@ -43,8 +42,6 @@ TinyGPSPlus gps;
 dht DHT;
 CMPS10 compass;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
-SimpleTimer timer;
-
 /*----------  End of Class Declaration  ----------*/
 
 /*----------  Variable Declaration  ----------*/
@@ -70,7 +67,7 @@ int voltage_diference = 0,
     sum = 0, 
     offset = 0;
 
-float humidity = 0.0 , temperature = 0.0;
+volatile float humidity = 0.0 , temperature = 0.0;
 
 char status;
 
@@ -86,11 +83,9 @@ void setup() {
     /*===============================================
   =            Timer for Multi Tasking            =
   ===============================================*/
-  //Timer1.initialize(500000); //one second
-  //Timer1.attachInterrupt(readTemperature);
-
-  timer.setInterval(1000, readTemperature);
- 
+  Timer1.initialize(500000); //one second
+  Timer1.attachInterrupt(readTemperature);
+  
   
   /*=====  End of Timer for Multi Tasking  ======*/
   
@@ -139,7 +134,6 @@ void setup() {
     while (1) delay(1);
   } else {
     Serial.println("SHT31 init success");
-    readTemperature();
   }
 
   analogReference(DEFAULT); //set the voltase of Analog PIN
@@ -148,7 +142,7 @@ void setup() {
   Serial.println(" type 1 to start...");
   Serial.println(" type 0 to stop...");
 
-  
+
 }
 
 // get pressure
@@ -603,14 +597,12 @@ void printAll(){
     Serial.print("IMG"); // 
 }
 
-
 void loop() {
   // put your main code here, to run repeatedly:
 
-  //noInterrupts();
+  noInterrupts();
 
-  //interrupts();
-  timer.run();
+  interrupts();
   unsigned long currentMillis = millis();
 
   if (Serial.available() > 0 ) {
@@ -664,15 +656,13 @@ void loop() {
   
   //  readTemperature(); 
   // }
-  
-  smartDelay(20); // must add for GPS data
+  smartDelay(50); // must add for GPS data
 
   if (millis() > 5000 && gps.charsProcessed() < 10)
     Serial.println(F("No GPS data received: check wiring"));
 
  
 }
-
 
 
 
