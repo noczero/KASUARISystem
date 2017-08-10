@@ -21,12 +21,13 @@
 #include "Adafruit_SHT31.h" // Temperature & Humidity
 #include "TimerOne.h"
 #include "SimpleTimer.h"
+#include <Servo.h>
 
 /*----------  End of ADT Library  ----------*/
 
 /*----------  PIN Declaration  ----------*/
-#define CO2Sensor A10
-#define airSpeedPIN  A8
+#define CO2Sensor A8
+#define airSpeedPIN  A9
 #define dataPinSHT11  2
 #define clockPinSHT11 52 //SCK
 #define DHT11 6
@@ -44,13 +45,14 @@ dht DHT;
 CMPS10 compass;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 SimpleTimer timer;
-
+Servo antennaServo;
 /*----------  End of Class Declaration  ----------*/
 
 /*----------  Variable Declaration  ----------*/
 bool  mulai, 
       closeSerial,
-      ambilFoto = false;
+      ambilFoto = false, 
+      receiveHome = false;
 
 double referencePressure = 0.0, 
        relativeAltitude = 0.0, 
@@ -59,16 +61,18 @@ double referencePressure = 0.0,
        asVolts = 0.0,
        compVOut = 0.0,
        dynPress = 0.0,
+       R = 6372795 , delLat , delLong , q , w, e, a, c, distance ,
        airSpeed = 0.0;
 
 float 
+	  latHome, longiHome,
       voltage = 0.0, 
       CO2 = 0.0;
 
 int voltage_diference = 0, 
     sensorValue = 0, 
     sum = 0, 
-    offset = 0;
+    offset = 0 , elevation = 0;
 
 float humidity = 0.0 , temperature = 0.0;
 
@@ -90,12 +94,14 @@ void setup() {
   //Timer1.attachInterrupt(readTemperature);
 
   timer.setInterval(1000, readTemperature);
+  //demo altitude
+  timer.setInterval(1000, demoAltitude);
  
   
   /*=====  End of Timer for Multi Tasking  ======*/
   
 
-  Serial.begin(115200);
+  Serial.begin(57600);
   Serial1.begin(38400); //Camera
   Serial2.begin(9600); //GPS Tx2 Rx2
 
@@ -147,8 +153,8 @@ void setup() {
   Serial.println("-- KASUARI Ready --");
   Serial.println(" type 1 to start...");
   Serial.println(" type 0 to stop...");
-
-  
+  antennaServo.attach(46);
+  antennaServo.write(0);
 }
 
 // get pressure
@@ -189,26 +195,46 @@ void printPitchRollYaw(){
 }
 
 boolean turun = false;
-double increment = 1.25;
+double increment = 5;
+
 void printAltitude() {
-  realPressure = getPressure();
- relativeAltitude = pressure.altitude(realPressure,referencePressure);
+
+ // original
+//  realPressure = getPressure();
+// relativeAltitude = pressure.altitude(realPressure,referencePressure);
  Serial.print(relativeAltitude);
 
   // Demo with Altitude
-  // if (!turun) {
-  //   relativeAltitude = relativeAltitude + increment;
-  // } else {
-  //   relativeAltitude = relativeAltitude - increment;
-  // }
+//   if (!turun) {
+//     relativeAltitude = relativeAltitude + increment;
+//   } else {
+//     relativeAltitude = relativeAltitude - increment;
+//   }
+//
+//   if (relativeAltitude >= 9000) {
+//     turun = true;
+//   } else if (relativeAltitude <= 0) {
+//     turun = false;
+//   }
+//   
+//    Serial.print(relativeAltitude);  
+}
 
-  // if (relativeAltitude >= 9000) {
-  //   turun = true;
-  // } else if (relativeAltitude <= 0) {
-  //   turun = false;
-  // }
+void demoAltitude() {
+    // Demo with Altitude
+   if (!turun) {
+     relativeAltitude = relativeAltitude + increment;
+   } else {
+     relativeAltitude = relativeAltitude - increment;
+   }
+
+   if (relativeAltitude >= 9000) {
+     turun = true;
+   } else if (relativeAltitude <= 0) {
+     turun = false;
+   }
    
-  //  Serial.print(relativeAltitude);  
+    //Serial.print(relativeAltitude);  
 }
 
 void printTempHumidity() {
@@ -510,10 +536,12 @@ void mainPhoto(){
           
 
           Serial.println();
+          timer.run();
       }
 
-      delay(100);
+      delay(200);
       StopTakePhotoCmd();
+      delay(100);
       ambilFoto = false;
       EndFlag = 0;
  
@@ -604,14 +632,50 @@ void printAll(){
 }
 
 
+void setHome(){
+  Serial.read();
+	String latti  = Serial.readStringUntil(',');
+	String longi  = Serial.readStringUntil('\n');
+      
+      //Stepper_prev = azimuth;
+      latHome = latti.toFloat();
+      longiHome = longi.toFloat();
+
+    //Serial.print("SetHOME : ");    Serial.print(latHome);
+    //Serial.print("----");
+     // Serial.println(longiHome);
+      receiveHome = true;
+}
+
+
+int calculateElevation(double startLat , double startLong , double endLat , double endLong, double alt) {
+	startLat = radians(startLat);
+	startLong = radians(startLong);
+	endLat = radians(endLat);
+	endLong = radians(endLong);
+
+	delLat = endLat - startLat;
+	delLong = endLong - startLong;
+
+	q = sin(delLat/2) * sin(delLat/2);
+	w = cos(startLat)*cos(endLat);
+	e = sin(delLong/2)*sin(delLong/2);
+	a = (q + w * e);
+	c = 2*atan2(sqrt(a),sqrt(1-a));
+	distance = c * R;
+
+	return degrees(atan(alt/distance));
+}
+
+
 void loop() {
   // put your main code here, to run repeatedly:
 
   //noInterrupts();
 
   //interrupts();
-  timer.run();
-  unsigned long currentMillis = millis();
+  
+  //unsigned long currentMillis = millis();
 
   if (Serial.available() > 0 ) {
     char command = (char) Serial.read();
@@ -631,13 +695,18 @@ void loop() {
         ambilFoto = true;
         break;
 
+      case '3' :
+        //parsingnya 3 -6.976132,107.630332
+      	setHome();
+      	break;
+
       default :
         break;
     }
   }
 
   // Start
-  if (mulai) {
+  if (mulai && receiveHome) {
 
      printAll();
       if(ambilFoto || checkAltitudeToCapture(relativeAltitude)){
@@ -649,6 +718,18 @@ void loop() {
       }
       Serial.println();
     
+  }
+
+  if (receiveHome && gps.location.isValid()) {
+  	elevation = calculateElevation(latHome,longiHome, gps.location.lat(), gps.location.lng(), relativeAltitude);
+  	
+  	if ( elevation > 80 && elevation < 100) {
+  		antennaServo.write(90);
+  	} else {
+  		antennaServo.write(0);
+  	}
+   //Serial.print("Elev ");
+    //Serial.println(elevation);
   }
 
   // Close Serial and stop all.
@@ -665,12 +746,12 @@ void loop() {
   //  readTemperature(); 
   // }
   
-  smartDelay(20); // must add for GPS data
+  smartDelay(50); // must add for GPS data
 
   if (millis() > 5000 && gps.charsProcessed() < 10)
     Serial.println(F("No GPS data received: check wiring"));
 
- 
+ timer.run();
 }
 
 
