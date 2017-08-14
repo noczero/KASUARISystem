@@ -200,7 +200,7 @@ double increment = 5;
 void printAltitude() {
 
  // original
-//  realPressure = getPressure();
+  realPressure = getPressure();
 // relativeAltitude = pressure.altitude(realPressure,referencePressure);
  Serial.print(relativeAltitude);
 
@@ -688,6 +688,7 @@ void loop() {
       case '1' : 
         mulai = true;
         closeSerial = false;
+        setHome();
         break;
 
       case '2' :
