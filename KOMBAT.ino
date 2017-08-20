@@ -95,7 +95,7 @@ void setup() {
 
   timer.setInterval(1000, readTemperature);
   //demo altitude
-  timer.setInterval(1000, demoAltitude);
+ //timer.setInterval(1000, demoAltitude);
  
   
   /*=====  End of Timer for Multi Tasking  ======*/
@@ -201,7 +201,7 @@ void printAltitude() {
 
  // original
   realPressure = getPressure();
-// relativeAltitude = pressure.altitude(realPressure,referencePressure);
+ relativeAltitude = pressure.altitude(realPressure,referencePressure);
  Serial.print(relativeAltitude);
 
   // Demo with Altitude
