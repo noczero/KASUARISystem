@@ -39,9 +39,7 @@
 
 /*----------  Class Declaration  ----------*/
 MS5611 pressure;
-//SHT1x tempHumid(dataPinSHT11, clockPinSHT11);
 TinyGPSPlus gps;
-//dht DHT;
 CMPS10 compass;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 SimpleTimer timer;
@@ -63,8 +61,7 @@ double referencePressure = 0.0,
        T = 0.0 ,
        P = 0.0 ;
 
-float 
-	  latHome, longiHome,
+float latHome, longiHome,
       voltage = 0.0, 
       CO2 = 0.0;
 
@@ -73,12 +70,11 @@ int voltage_diference = 0,
     sum = 0, 
     offset = 0 , elevation = 0;
 
-float humidity = 0.0 , temperature = 0.0;
+float humidity = 0.0 , 
+      temperature = 0.0;
 
 char status;
 
-long previousMillis1 = 0 , previousMillis2 = 0 ;   
-long interval1 = 10 , interval2 = 5000; //1 detik
 
 /*----------  End of Variable Declaration  ----------*/
 
