@@ -45,6 +45,7 @@ dht DHT;
 CMPS10 compass;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 SimpleTimer timer;
+SimpleTimer timerAltitude;
 Servo antennaServo;
 /*----------  End of Class Declaration  ----------*/
 
@@ -52,7 +53,8 @@ Servo antennaServo;
 bool  mulai, 
       closeSerial,
       ambilFoto = false, 
-      receiveHome = false;
+      receiveHome = false ,
+      cmdTakeFoto = false;
 
 double referencePressure = 0.0, 
        relativeAltitude = 0.0, 
@@ -95,7 +97,7 @@ void setup() {
 
   timer.setInterval(1000, readTemperature);
   //demo altitude
- //timer.setInterval(1000, demoAltitude);
+ //timerAltitude.setInterval(1000, demoAltitude);
  
   
   /*=====  End of Timer for Multi Tasking  ======*/
@@ -154,7 +156,7 @@ void setup() {
   Serial.println(" type 1 to start...");
   Serial.println(" type 0 to stop...");
   antennaServo.attach(46);
-  antennaServo.write(0);
+  antennaServo.write(178);
 }
 
 // get pressure
@@ -489,7 +491,7 @@ void mainPhoto(){
           count=0;
           //Serial1.flush();
           SendReadDataCmd();
-          delay(20);
+          delay(10);
           while(Serial1.available()>0)
           {
               incomingbyte=Serial1.read();
@@ -537,12 +539,13 @@ void mainPhoto(){
 
           Serial.println();
           timer.run();
+          //timerAltitude.run();
       }
 
-      delay(200);
+      delay(50);
       StopTakePhotoCmd();
-      delay(100);
       ambilFoto = false;
+      cmdTakeFoto = false;
       EndFlag = 0;
  
 }
@@ -693,7 +696,8 @@ void loop() {
 
       case '2' :
         //mainPhoto();
-        ambilFoto = true;
+        //ambilFoto = true;
+        cmdTakeFoto = true;
         break;
 
       case '3' :
@@ -710,7 +714,7 @@ void loop() {
   if (mulai && receiveHome) {
 
      printAll();
-      if(ambilFoto || checkAltitudeToCapture(relativeAltitude)){
+      if(cmdTakeFoto || checkAltitudeToCapture(relativeAltitude)){
         //check ambil foto still running or not
         if (!ambilFoto){
           Serial.println(); 
@@ -725,7 +729,7 @@ void loop() {
   	elevation = calculateElevation(latHome,longiHome, gps.location.lat(), gps.location.lng(), relativeAltitude);
   	
   	if ( elevation > 80 && elevation < 100) {
-  		antennaServo.write(90);
+  		antennaServo.write(78);
   	} else {
   		antennaServo.write(0);
   	}
@@ -753,6 +757,7 @@ void loop() {
     Serial.println(F("No GPS data received: check wiring"));
 
  timer.run();
+ //timerAltitude.run();
 }
 
 
