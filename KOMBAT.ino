@@ -2,11 +2,17 @@
   Bismillahirahmanirrahim
   TODO:
   - Pressure & Altitude : Done
-  - Temperature & Humidity : 
+  - Temperature & Humidity : Done 
   - GPS : Done
   - CO2 : Done
-  - Yaw Pitch Roll : Not Yet
+  - Yaw Pitch Roll : Done
   - Camera : done -multiple shoot
+  - Servo : Done
+
+  -- Config Serial --
+  - 3Dr Tx Rx serial > Baudrate : 57600
+  - camera Tx Rx serial1
+  - GPS Tx Rx serial2
  */
 
 
@@ -14,9 +20,7 @@
 #include "I2C.h"
 #include <Wire.h>
 #include "MS5611.h" //Pressure & Altitude
-#include "SHT1x.h"
 #include "TinyGPS.h"
-#include "dht.h"
 #include "CMPS10.h"
 #include "Adafruit_SHT31.h" // Temperature & Humidity
 #include "TimerOne.h"
@@ -30,18 +34,14 @@
 #define airSpeedPIN  A9
 #define dataPinSHT11  2
 #define clockPinSHT11 52 //SCK
-#define DHT11 6
-//#define buz 6
-// camera Tx Rx serial1
-// GPS Tx Rx serial2
-// 3Dr Rx Rx serial 
+
 /*----------  End of Pin Declaration  ----------*/
 
 /*----------  Class Declaration  ----------*/
 MS5611 pressure;
 //SHT1x tempHumid(dataPinSHT11, clockPinSHT11);
 TinyGPSPlus gps;
-dht DHT;
+//dht DHT;
 CMPS10 compass;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 SimpleTimer timer;
@@ -59,12 +59,9 @@ bool  mulai,
 double referencePressure = 0.0, 
        relativeAltitude = 0.0, 
        realPressure = 0.0, 
-       asOffsetV = 0.0 ,
-       asVolts = 0.0,
-       compVOut = 0.0,
-       dynPress = 0.0,
        R = 6372795 , delLat , delLong , q , w, e, a, c, distance ,
-       airSpeed = 0.0;
+       T = 0.0 ,
+       P = 0.0 ;
 
 float 
 	  latHome, longiHome,
@@ -89,41 +86,19 @@ long interval1 = 10 , interval2 = 5000; //1 detik
 void setup() {
   // put your setup code here, to run once:
   delay(100); // Wait for sensors to get ready
-    /*===============================================
-  =            Timer for Multi Tasking            =
-  ===============================================*/
-  //Timer1.initialize(500000); //one second
-  //Timer1.attachInterrupt(readTemperature);
-
-  timer.setInterval(1000, readTemperature);
-  //demo altitude
- //timerAltitude.setInterval(1000, demoAltitude);
- 
   
-  /*=====  End of Timer for Multi Tasking  ======*/
-  
-
-  Serial.begin(57600);
+  Serial.begin(57600); // system baudrate 
   Serial1.begin(38400); //Camera
   Serial2.begin(9600); //GPS Tx2 Rx2
 
   // camera initializtion
-
   Serial.println("Camera Initialize...");
   delay(100);
   SendResetCmd();
   delay(500);   
   SetImageSizeCmd(0X11); //ukuran gambar 
-  // delay(200);
-  // SetBaudRateCmd(0x2AE4);
-  // delay(100);
-  // SendResetCmd();
-  // delay(500);
-  // SetBaudRateCmd(0x0DA6);
   delay(200);  
 
-  //SendResetCmd();
-  //delay(3000);
   Serial.println("Camera Init Success...");
   /*======================================
   =            Pressure Setup            =
@@ -151,43 +126,46 @@ void setup() {
   }
 
   analogReference(DEFAULT); //set the voltase of Analog PIN
-  asOffsetV = analogRead(airSpeedPIN) * .0047; //voltage offset from A15 (Airspeed)
+  
   Serial.println("-- KASUARI Ready --");
   Serial.println(" type 1 to start...");
   Serial.println(" type 0 to stop...");
-  antennaServo.attach(46);
-  antennaServo.write(178);
+  
+  /*=====  For Turn Servo  ======*/
+  antennaServo.attach(46); // the pin 46
+  antennaServo.write(178); // start vertical angle 
+
+  /*===============================================
+  =            Timer for Multi Tasking            =
+  ===============================================*/
+
+  timer.setInterval(1000, readTemperature); // temperature SHT31
+ //timerAltitude.setInterval(1000, demoAltitude); // demo ketinggian 
+   
+  /*=====  End of Timer for Multi Tasking  ======*/
+  
 }
 
-// get pressure
+// function to get pressure from barometer
 double getPressure() {
-  double T,P;
-
   status = pressure.startTemperature(4);
-  if (status != 0)
-  {
+  if (status != 0) {
     delay(status);
     status = pressure.getTemperature(T, 1);
-    if (status != 0)
-    {
+    if (status != 0) {
       status = pressure.startPressure(4);
-      if (status != 0)
-      {
+      if (status != 0) {
         delay(status);
         status = pressure.getPressure(P,T, 1);
-        if (status != 0)
-        {
+        if (status != 0) {
           return(P);
         }
-        else Serial.println("error retrieving pressure measurement\n");
       }
-      else Serial.println("error starting pressure measurement\n");
     }
-    else Serial.println("error retrieving temperature measurement\n");
   }
-  else Serial.println("error starting temperature measurement\n");
 }
 
+// procedure to print pitch roll yaw for sikap wahana
 void printPitchRollYaw(){
   Serial.print(compass.pitch()); 
   Serial.print(','); 
@@ -199,31 +177,15 @@ void printPitchRollYaw(){
 boolean turun = false;
 double increment = 5;
 
+// procedure to print altitude
 void printAltitude() {
-
- // original
-  realPressure = getPressure();
- relativeAltitude = pressure.altitude(realPressure,referencePressure);
+ realPressure = getPressure(); // get the pressure
+ relativeAltitude = pressure.altitude(realPressure,referencePressure); // comment this if use demo altitude 
  Serial.print(relativeAltitude);
-
-  // Demo with Altitude
-//   if (!turun) {
-//     relativeAltitude = relativeAltitude + increment;
-//   } else {
-//     relativeAltitude = relativeAltitude - increment;
-//   }
-//
-//   if (relativeAltitude >= 9000) {
-//     turun = true;
-//   } else if (relativeAltitude <= 0) {
-//     turun = false;
-//   }
-//   
-//    Serial.print(relativeAltitude);  
 }
 
+// procedure to print altitude but only demo
 void demoAltitude() {
-    // Demo with Altitude
    if (!turun) {
      relativeAltitude = relativeAltitude + increment;
    } else {
@@ -234,52 +196,11 @@ void demoAltitude() {
      turun = true;
    } else if (relativeAltitude <= 0) {
      turun = false;
-   }
-   
-    //Serial.print(relativeAltitude);  
+   }   
 }
 
+// procedure to print temperature and humidity value that call before on timer 
 void printTempHumidity() {
-  // temperature = tempHumid.readTemperatureC();
-  // humidity = tempHumid.readHumidity();
-  // Serial.print(temperature, DEC);
-
-  // from the barometer
-  // status = pressure.startTemperature(4);
-  // if (status != 0)
-  // {
-  //   delay(status);
-  //   status = pressure.getTemperature(temperature, 1);
-  //   if (status != 0)
-  //     Serial.print(temperature);
-  // }
-  
-  // dht11 versions
-  // int chk = DHT.read11(DHT11);
-  // switch (chk)
-  // {
-  //   case DHTLIB_OK:  
-  //     Serial.print(DHT.temperature , 1);
-  //     Serial.print(",");
-  //     Serial.print(DHT.humidity , 1); 
-  //   break;
-  //   case DHTLIB_ERROR_CHECKSUM: 
-  //     Serial.print(0.0);
-  //     Serial.print(",");
-  //     Serial.print(0.0); 
-  //   break;
-  //   case DHTLIB_ERROR_TIMEOUT: 
-  //     Serial.print(0.0);
-  //     Serial.print(",");
-  //     Serial.print(0.0); 
-  //   break;
-  //   default: 
-  //     Serial.print(0.0);
-  //     Serial.print(",");
-  //     Serial.print(0.0);  
-  //   break;
-  // }
-  
   if (!isnan(temperature) || !isnan(humidity)) {  // check if 'is not a number'
      Serial.print(temperature);
      Serial.print(",");
@@ -289,55 +210,38 @@ void printTempHumidity() {
      Serial.print(",");
      Serial.print(0.0);
   }
-  
 }
 
+// procedure to give the temperature and humidty values with sht31 method
 void readTemperature(){
-    temperature = sht31.readTemperature();
+  temperature = sht31.readTemperature();
   humidity = sht31.readHumidity();
 }
 
+// procedure to print pressure
 void printTekanan(){
   Serial.print(realPressure);
 }
 
-void printArahAngin(){
-  Serial.print("0");
-}
-
-void printKecAngin() {
-    asVolts = analogRead(airSpeedPIN) * .0047;
-//    Serial.print(asVolts);
-//    Serial.print(':');
-    compVOut = asVolts - asOffsetV;
-    if(compVOut < .005)  {                    // Set noise to 0, min speed is ~8mph
-      compVOut = 0.0;
-    }  
-    dynPress = compVOut * 1000.0;     // With autozero, dynamic pressure in kPa = Vout, convert kPa to P
-    airSpeed = sqrt((2 * dynPress)/1.225);   // Converts pressure to m/s, 1.225 k/m3 is standard air density
-    Serial.print(airSpeed);
-}
-
+// procedure to print lintang dan bujur (latitude and longitude) use tiny gps
 void printLintangBujur() {
   printFloat(gps.location.lat(), gps.location.isValid(), 11, 6); //Latitude
   Serial.print(",");
   printFloat(gps.location.lng(), gps.location.isValid(), 12, 6); //longitude
 }
 
+// procedure to print CO2 value with Senserion
 void printCO2() {
   sensorValue = analogRead(CO2Sensor); 
   voltage = sensorValue*(5000/1024.0); 
 
-  if(voltage == 0)
-  {
+  if(voltage == 0) {
     Serial.print("Fault");
   }
-  else if(voltage < 400)
-  {
+  else if(voltage < 400) {
     Serial.print(0); //still preheating
   }
-  else
-  {
+  else {
     voltage_diference=voltage-400;
     CO2=voltage_diference*50.0/16.0;
     //Print CO2 concentration
@@ -345,7 +249,7 @@ void printCO2() {
   }
 }
 
-//for GPS lat long
+// procedure to print gps value in precision
 static void printFloat(float val, bool valid, int len, int prec)
 {
   if (!valid)
@@ -364,6 +268,7 @@ static void printFloat(float val, bool valid, int len, int prec)
   smartDelay(0);
 }
 
+// smart delay with milis in GPS
 static void smartDelay(unsigned long ms)
 {
   unsigned long start = millis();
@@ -509,41 +414,34 @@ void mainPhoto(){
               }
           }
    
-          //print parralel
-           Serial.print("OK,");  // Header [0]
-        printAltitude();      // ketinggian [1]
-        Serial.print(",");
-        printTempHumidity();  // temperature [2] tekanan [3]
-        Serial.print(",");
-        printTekanan();       // tekanan [4]
-        Serial.print(",");
-        //printArahAngin();     // Arah Angin [5]
-        //Serial.print(",");
-        //printKecAngin();      // Kecepatan Angin [6]
-        //Serial.print(",");
-        printLintangBujur();  // GPS Lintang [7] dan Bujur [8]
-        Serial.print(",");
-        printCO2();           // print CO2 [9]
-        Serial.print(",");
-        printPitchRollYaw();  // print the pitch [10] roll [11] yaw [12].
-        Serial.print(",");
-    
+          // print data use paralel scheme
+          Serial.print("OK,");  // Header [0]
+          printAltitude();      // ketinggian [1]
+          Serial.print(",");
+          printTempHumidity();  // temperature [2] tekanan [3]
+          Serial.print(",");
+          printTekanan();       // tekanan [4]
+          Serial.print(",");
+          printLintangBujur();  // GPS Lintang [7] dan Bujur [8]
+          Serial.print(",");
+          printCO2();           // print CO2 [9]
+          Serial.print(",");
+          printPitchRollYaw();  // print the pitch [10] roll [11] yaw [12].
+          Serial.print(",");
 
           for(j=0;j<count;j++)
           {
               if(dataCamera[j]<0x10)  Serial.print("0");
               Serial.print(dataCamera[j],HEX);           // observe the image through serial port
-              //Serial.print(" ");
           }
-          
 
           Serial.println();
-          timer.run();
+          timer.run(); // to change the value of temp and humid using timer
           //timerAltitude.run();
       }
 
       delay(50);
-      StopTakePhotoCmd();
+      StopTakePhotoCmd(); // must add to keep images continous shooting
       ambilFoto = false;
       cmdTakeFoto = false;
       EndFlag = 0;
@@ -552,7 +450,7 @@ void mainPhoto(){
 
 /*=====  End of Camera  ======*/
 
-//check altitude
+// check altitude to capture image every 200 meters in 500 - 3000 meters 
 boolean checkAltitudeToCapture(double tinggi){
   boolean take;
   int ketinggian = (int) tinggi;
@@ -606,10 +504,9 @@ boolean checkAltitudeToCapture(double tinggi){
   return false;
 }
 
-int inc = 0;
-
+// procedure to print the data, fit the rules
 void printAll(){
-     //Start print the data
+    // Start print the data
     // 0 1 2 3 4 5 6 7 8 9 10 11 
     // Header Ketinggian  Suhu  Humid  Tekanan  Lintang Bujur CO2 pitch roll yaw IMG 
     // split by ,
@@ -621,10 +518,6 @@ void printAll(){
     Serial.print(",");
     printTekanan();       // tekanan [4]
     Serial.print(",");
-    //printArahAngin();     // Arah Angin [5]
-    //Serial.print(",");
-    //printKecAngin();      // Kecepatan Angin [6]
-    //Serial.print(",");
     printLintangBujur();  // GPS Lintang [5] dan Bujur [6]
     Serial.print(",");
     printCO2();           // print CO2 [7]
@@ -634,23 +527,22 @@ void printAll(){
     Serial.print("IMG"); // 
 }
 
-
-void setHome(){
+// procedure to set the home, then use to calculate elevation
+void setHome() {
   Serial.read();
 	String latti  = Serial.readStringUntil(',');
 	String longi  = Serial.readStringUntil('\n');
       
-      //Stepper_prev = azimuth;
-      latHome = latti.toFloat();
-      longiHome = longi.toFloat();
+  latHome = latti.toFloat();
+  longiHome = longi.toFloat();
 
-    //Serial.print("SetHOME : ");    Serial.print(latHome);
-    //Serial.print("----");
-     // Serial.println(longiHome);
-      receiveHome = true;
+  receiveHome = true;
+  //Serial.print("SetHOME : ");    Serial.print(latHome);
+  //Serial.print("----");
+  //Serial.println(longiHome);
 }
 
-
+// function to calculate elevasi for condition to move the servo
 int calculateElevation(double startLat , double startLong , double endLat , double endLong, double alt) {
 	startLat = radians(startLat);
 	startLong = radians(startLong);
@@ -671,15 +563,9 @@ int calculateElevation(double startLat , double startLong , double endLat , doub
 }
 
 
+// the main brain
 void loop() {
   // put your main code here, to run repeatedly:
-
-  //noInterrupts();
-
-  //interrupts();
-  
-  //unsigned long currentMillis = millis();
-
   if (Serial.available() > 0 ) {
     char command = (char) Serial.read();
 
@@ -691,50 +577,40 @@ void loop() {
       case '1' : 
         mulai = true;
         closeSerial = false;
-        setHome();
+        setHome(); //parsingnya 1 -6.976132,107.630332
         break;
 
       case '2' :
-        //mainPhoto();
-        //ambilFoto = true;
         cmdTakeFoto = true;
         break;
-
-      case '3' :
-        //parsingnya 3 -6.976132,107.630332
-      	setHome();
-      	break;
 
       default :
         break;
     }
   }
 
-  // Start
+  // check if command "1" is execute and all the things start
   if (mulai && receiveHome) {
-
-     printAll();
-      if(cmdTakeFoto || checkAltitudeToCapture(relativeAltitude)){
-        //check ambil foto still running or not
-        if (!ambilFoto){
-          Serial.println(); 
-          mainPhoto();
-        }
+    printAll(); // print all the data
+    if(cmdTakeFoto || checkAltitudeToCapture(relativeAltitude)){
+      //check ambil foto still running or not
+      if (!ambilFoto){
+        Serial.println(); 
+        mainPhoto();
       }
-      Serial.println();
-    
+    }
+    Serial.println();
   }
 
+  // check gps is valid and coordinate home is received
   if (receiveHome && gps.location.isValid()) {
   	elevation = calculateElevation(latHome,longiHome, gps.location.lat(), gps.location.lng(), relativeAltitude);
   	
   	if ( elevation > 80 && elevation < 100) {
   		antennaServo.write(78);
   	} else {
-  		antennaServo.write(0);
+  		antennaServo.write(178);
   	}
-   //Serial.print("Elev ");
-    //Serial.println(elevation);
   }
 
   // Close Serial and stop all.
@@ -743,36 +619,12 @@ void loop() {
     Serial.println("-- KASUARI Stopped --");
     Serial.end();
   }
-  
-  //  if(currentMillis - previousMillis2 > interval2) {
-  //   // save the last time you blinked the LED 
-  //   previousMillis2 = currentMillis;   
-  
-  //  readTemperature(); 
-  // }
-  
+    
   smartDelay(50); // must add for GPS data
 
   if (millis() > 5000 && gps.charsProcessed() < 10)
     Serial.println(F("No GPS data received: check wiring"));
 
- timer.run();
- //timerAltitude.run();
+  timer.run();
+  //timerAltitude.run(); //DEMO ALTITUDE
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
