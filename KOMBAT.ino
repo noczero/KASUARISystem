@@ -602,7 +602,7 @@ void loop() {
   if (receiveHome && gps.location.isValid()) {
   	elevation = calculateElevation(latHome,longiHome, gps.location.lat(), gps.location.lng(), relativeAltitude);
   	
-  	if ( elevation > 80 && elevation < 100) {
+  	if ( elevation > 70 && elevation < 90) {
   		antennaServo.write(78);
   	} else {
   		antennaServo.write(178);
