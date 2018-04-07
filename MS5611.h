@@ -45,6 +45,7 @@ class MS5611
 			// returns 1 for success, 0 for fail
 			// compensate: 1 or 0 for compensate temperature and pressure with a second order math. This increase accuracy for low temperature
 
+
 		char startPressure(char oversampling);
 			// command MS5611 to start a pressure measurement
 			// oversampling: 0 - 4 for oversampling value

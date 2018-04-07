@@ -246,6 +246,9 @@ char MS5611::getTemperature(double &T, byte compensate){
         return 0;
 }
 
+//modify
+
+
 
 char MS5611::startPressure(char oversampling){
 // Begin a pressure reading.
@@ -364,3 +367,6 @@ double MS5611::altitude(double P, double P0){
 
     return (44330.0 * (1.0 - pow(P / P0, 0.190294957183635)));
 }
+
+
+

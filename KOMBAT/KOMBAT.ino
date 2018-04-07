@@ -84,18 +84,18 @@ void setup() {
   delay(100); // Wait for sensors to get ready
   
   Serial.begin(57600); // system baudrate 
-  Serial1.begin(38400); //Camera
-  Serial2.begin(9600); //GPS Tx2 Rx2
+  // Serial1.begin(38400); //Camera
+  // Serial2.begin(9600); //GPS Tx2 Rx2
 
-  // camera initializtion
-  Serial.println("Camera Initialize...");
-  delay(100);
-  SendResetCmd();
-  delay(500);   
-  SetImageSizeCmd(0X11); //ukuran gambar 
-  delay(200);  
+  // // camera initializtion
+  // Serial.println("Camera Initialize...");
+  // delay(100);
+  // SendResetCmd();
+  // delay(500);   
+  // SetImageSizeCmd(0X11); //ukuran gambar 
+  // delay(200);  
 
-  Serial.println("Camera Init Success...");
+  //Serial.println("Camera Init Success...");
   /*======================================
   =            Pressure Setup            =
   ======================================*/
@@ -113,29 +113,29 @@ void setup() {
   /*=====  End of Pressure Setup  ======*/
   
   /*----------  SHT31 Setup  ----------*/
-  if (! sht31.begin(0x44)) {   // Set to 0x45 for alternate i2c addr
-    Serial.println("Couldn't find SHT31, check wiring");
-    while (1) delay(1);
-  } else {
-    Serial.println("SHT31 init success");
-    readTemperature();
-  }
+  // if (! sht31.begin(0x44)) {   // Set to 0x45 for alternate i2c addr
+  //   Serial.println("Couldn't find SHT31, check wiring");
+  //   while (1) delay(1);
+  // } else {
+  //   Serial.println("SHT31 init success");
+  //   readTemperature();
+  // }
 
-  analogReference(DEFAULT); //set the voltase of Analog PIN
+  // analogReference(DEFAULT); //set the voltase of Analog PIN
   
   Serial.println("-- KASUARI Ready --");
   Serial.println(" type 1 to start...");
   Serial.println(" type 0 to stop...");
   
   /*=====  For Turn Servo  ======*/
-  antennaServo.attach(46); // the pin 46
-  antennaServo.write(178); // start vertical angle 
+  //antennaServo.attach(46); // the pin 46
+  //antennaServo.write(178); // start vertical angle 
 
   /*===============================================
   =            Timer for Multi Tasking            =
   ===============================================*/
 
-  timer.setInterval(1000, readTemperature); // temperature SHT31
+  //timer.setInterval(1000, readTemperature); // temperature SHT31
  //timerAltitude.setInterval(1000, demoAltitude); // demo ketinggian 
    
   /*=====  End of Timer for Multi Tasking  ======*/
